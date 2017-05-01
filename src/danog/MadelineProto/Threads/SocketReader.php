@@ -47,11 +47,13 @@ class SocketReader extends \Threaded implements \Collectable
         $this->ready = true;
 
         while ($this->API->run_workers) {
-           try {
-           var_dump(method_exists($this->API, 'recv_message'));
+            try {
+                var_dump(method_exists($this->API, 'recv_message'));
                 $this->API->recv_message($this->current);
                 $handler_pool->submit(new SocketHandler($this->API, $this->current));
-            } catch (\danog\MadelineProto\NothingInTheSocketException $e) { \danog\MadelineProto\Logger::log(['Nothing in the socket for dc '.$this->current], \danog\MadelineProto\Logger::VERBOSE); }
+            } catch (\danog\MadelineProto\NothingInTheSocketException $e) {
+                \danog\MadelineProto\Logger::log(['Nothing in the socket for dc '.$this->current], \danog\MadelineProto\Logger::VERBOSE);
+            }
         }
         while ($number = $handler_pool->collect()) {
             \danog\MadelineProto\Logger::log(['Shutting down handler pool for dc '.$this->current.', '.$number.' jobs left'], \danog\MadelineProto\Logger::NOTICE);

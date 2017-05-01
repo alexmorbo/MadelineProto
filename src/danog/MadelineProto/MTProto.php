@@ -53,6 +53,7 @@ class MTProto extends \Volatile
     public $run_workers = false;
     public $threads = false;
     public $rsa_keys = [];
+
     public function ___construct($settings = [])
     {
         //if ($this->unserialized($settings)) return true;
@@ -118,7 +119,7 @@ class MTProto extends \Volatile
             unset($t['readers']);
         }
 
-        return array_keys((array)$t);
+        return array_keys((array) $t);
     }
 
     public function __wakeup()

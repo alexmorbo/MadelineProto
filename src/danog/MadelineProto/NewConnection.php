@@ -140,7 +140,7 @@ class NewConnection extends \Volatile
             unset($t['sock']);
         }
 
-        return array_keys((array)$t);
+        return array_keys((array) $t);
     }
 
     public function __wakeup()
