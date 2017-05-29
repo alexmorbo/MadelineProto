@@ -41,6 +41,7 @@ if ($MadelineProto === false) {
                 'phone_number'     => getenv('MTPROTO_NUMBER'),
            ]
         );
+
         \danog\MadelineProto\Logger::log([$checkedPhone], \danog\MadelineProto\Logger::NOTICE);
         $sentCode = $MadelineProto->phone_login(getenv('MTPROTO_NUMBER'));
         \danog\MadelineProto\Logger::log([$sentCode], \danog\MadelineProto\Logger::NOTICE);
@@ -70,7 +71,7 @@ $message = (getenv('TRAVIS_COMMIT') == '') ? 'I iz works always (io laborare sem
 
 echo 'Serializing MadelineProto to session.madeline...'.PHP_EOL;
 echo 'Wrote '.\danog\MadelineProto\Serialization::serialize('session.madeline', $MadelineProto).' bytes'.PHP_EOL;
-echo 'Size of MadelineProto instance is '.strlen(serialize($MadelineProto)).' bytes'.PHP_EOL;
+
 if (stripos(readline('Do you want to make the secret chat tests? (y/n)'), 'y') !== false) {
 
 /*
@@ -129,7 +130,6 @@ $inputEncryptedFile = $MadelineProto->upload_encrypted('tests/mosconi.mp3');
 }
 $mention = $MadelineProto->get_info(getenv('TEST_USERNAME')); // Returns an array with all of the constructors that can be extracted from a username or an id
 $mention = $mention['user_id']; // Selects only the numeric user id
-
 $media = [];
 
 // Photo uploaded as document
@@ -172,8 +172,7 @@ foreach (json_decode(getenv('TEST_DESTINATION_GROUPS'), true) as $peer) {
         $type = $MadelineProto->messages->sendMedia(['peer' => $peer, 'media' => $inputMedia]);
     }
 }
-
-var_dump($MadelineProto->API->get_updates());
+//var_dump($MadelineProto->API->get_updates());
 echo 'Serializing MadelineProto to session.madeline...'.PHP_EOL;
 echo 'Wrote '.\danog\MadelineProto\Serialization::serialize('session.madeline', $MadelineProto).' bytes'.PHP_EOL;
 echo 'Size of MadelineProto instance is '.strlen(serialize($MadelineProto)).' bytes'.PHP_EOL;
@@ -191,5 +190,5 @@ foreach (json_decode(getenv('TEST_DESTINATION_GROUPS'), true) as $peer) {
     $sentMessage = $MadelineProto->messages->sendMessage(['peer' => $peer, 'message' => $message, 'entities' => [['_' => 'inputMessageEntityMentionName', 'offset' => 0, 'length' => mb_strlen($message), 'user_id' => $mention]]]);
     \danog\MadelineProto\Logger::log([$sentMessage], \danog\MadelineProto\Logger::NOTICE);
 }
-var_dump($MadelineProto->API->get_updates());
+//var_dump($MadelineProto->API->get_updates());
 var_dump('HERE');

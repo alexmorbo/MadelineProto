@@ -10,23 +10,30 @@ You should have received a copy of the GNU General Public License along with Mad
 If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace danog\MadelineProto;
+namespace danog\MadelineProto\TL\Types;
 
-abstract class SerializableVolatile
+class Bytes extends \Volatile implements \JsonSerializable
 {
-    public function unserialized($data)
-    {
-        if (!isset($data['_']) || $data['_'] !== 'pony') {
-            return false;
-        }
-        unset($data['_']);
-        foreach ($data as $key => $data) {
-            $this->{$key} = $data;
-        }
-        if (method_exists($this, '__wakeup')) {
-            $this->__wakeup();
-        }
+    use \danog\Serializable;
+    private $bytes = [];
 
-        return true;
+    public function ___construct($bytes)
+    {
+        $this->bytes = $bytes;
+    }
+
+    public function __sleep()
+    {
+        return ['bytes'];
+    }
+
+    public function __toString()
+    {
+        return $this->bytes;
+    }
+
+    public function jsonSerialize()
+    {
+        return utf8_encode($this->bytes);
     }
 }

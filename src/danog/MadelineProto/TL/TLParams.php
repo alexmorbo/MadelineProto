@@ -12,14 +12,12 @@ If not, see <http://www.gnu.org/licenses/>.
 
 namespace danog\MadelineProto\TL;
 
-class TLParams
+trait TLParams
 {
     public function parse_params($key, $mtproto = false)
     {
         foreach ($this->params[$key] as $kkey => $param) {
-            $param['flag'] = false;
             if (preg_match('/^flags\.\d*\?/', $param['type'])) {
-                $param['flag'] = true;
                 $flag = explode('?', explode('flags.', $param['type'])[1]);
                 $param['pow'] = pow(2, $flag[0]);
                 $param['type'] = $flag[1];

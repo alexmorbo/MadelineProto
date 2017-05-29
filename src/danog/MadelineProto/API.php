@@ -14,13 +14,10 @@ namespace danog\MadelineProto;
 
 class API extends APIFactory
 {
-    use \danog\MadelineProto\Wrappers\Login;
-    use \danog\MadelineProto\Wrappers\SettingsManager;
+    use \danog\Serializable;
+    private $storage = [];
 
-    public $API;
-    public $namespace = '';
-
-    public function __construct($params = [])
+    public function ___construct($params = [])
     {
         set_error_handler(['\danog\MadelineProto\Exception', 'ExceptionErrorHandler']);
         $this->API = new MTProto($params);
@@ -46,12 +43,33 @@ class API extends APIFactory
 
     public function __destruct()
     {
+        if (\danog\MadelineProto\Logger::$has_thread && is_object(\Thread::getCurrentThread())) {
+            return;
+        }
         restore_error_handler();
     }
 
     public function __sleep()
     {
-        return ['API'];
+        return ['API', 'storage'];
+    }
+
+    public function &__get($name)
+    {
+        if ($name === 'settings') {
+            return $this->API->settings;
+        }
+
+        return $this->storage[$name];
+    }
+
+    public function __set($name, $value)
+    {
+        if ($name === 'settings') {
+            return $this->API->__construct($value);
+        }
+
+        return $this->storage[$name] = $value;
     }
 
     public function APIFactory()

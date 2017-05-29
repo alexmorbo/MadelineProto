@@ -15,6 +15,7 @@ namespace danog\MadelineProto;
 class DocsBuilder
 {
     use \danog\MadelineProto\TL\TL;
+    use Tools;
 
     public function __construct($settings)
     {
@@ -37,7 +38,7 @@ class DocsBuilder
     public function mk_docs()
     {
         $types = [];
-//        $any = '*';
+        $any = '*';
         \danog\MadelineProto\Logger::log(['Generating documentation index...'], \danog\MadelineProto\Logger::NOTICE);
 
         file_put_contents($this->index, '---
@@ -56,7 +57,7 @@ description: '.$this->settings['description'].'
 [Back to main documentation](..)
 ');
 
-        foreach (glob('methods/*') as $unlink) {
+        foreach (glob('methods/'.$any) as $unlink) {
             unlink($unlink);
         }
 
@@ -159,7 +160,7 @@ description: '.$this->settings['description'].'
                     case 'false':
                         $ptype = 'Bool';
                 }
-                $table .= '|'.str_replace('_', '\_', $param['name']).'|'.(isset($param['subtype']) ? 'Array of ' : '').'['.str_replace('_', '\_', $ptype).'](../types/'.$ptype.'.md) | '.($param['flag'] ? 'Optional' : 'Yes').'|';
+                $table .= '|'.str_replace('_', '\_', $param['name']).'|'.(isset($param['subtype']) ? 'Array of ' : '').'['.str_replace('_', '\_', $ptype).'](../types/'.$ptype.'.md) | '.(isset($param['pow']) ? 'Optional' : 'Yes').'|';
                 if (isset($this->td_descriptions['methods'][$rmethod])) {
                     $table .= $this->td_descriptions['methods'][$rmethod]['params'][$param['name']].'|';
                 }
@@ -306,7 +307,7 @@ description: List of methods
 
 '.implode('', $methods));
 
-        foreach (glob('constructors/*') as $unlink) {
+        foreach (glob('constructors/'.$any) as $unlink) {
             unlink($unlink);
         }
 
@@ -420,7 +421,7 @@ description: List of methods
                     case 'false':
                         $ptype = 'Bool';
                 }
-                $table .= '|'.str_replace('_', '\_', $param['name']).'|'.(isset($param['subtype']) ? 'Array of ' : '').'['.str_replace('_', '\_', $ptype).'](../'.$link_type.'/'.$ptype.'.md) | '.($param['flag'] ? 'Optional' : 'Yes').'|';
+                $table .= '|'.str_replace('_', '\_', $param['name']).'|'.(isset($param['subtype']) ? 'Array of ' : '').'['.str_replace('_', '\_', $ptype).'](../'.$link_type.'/'.$ptype.'.md) | '.(isset($param['pow']) ? 'Optional' : 'Yes').'|';
                 if (isset($this->td_descriptions['constructors'][$rconstructor]['params'][$param['name']])) {
                     $table .= $this->td_descriptions['constructors'][$rconstructor]['params'][$param['name']].'|';
                 }
@@ -590,6 +591,29 @@ $'.$type.' = -147286699; // Numeric chat id returned by request_secret_chat, can
 
 ';
             }
+            if (in_array($type, ['KeyboardButton'])) {
+                $header .= 'Clicking these buttons:
+
+To click these buttons simply run the `click` method:  
+
+```
+$result = $'.$type.'->click();
+```
+
+`$result` can be one of the following:
+
+
+* A string - If the button is a keyboardButtonUrl
+
+* [Updates](Updates.md) - If the button is a keyboardButton, the message will be sent to the chat, in reply to the message with the keyboard
+
+* [messages_BotCallbackAnswer](messages_BotCallbackAnswer.md) - If the button is a keyboardButtonCallback or a keyboardButtonGame the button will be pressed and the result will be returned
+
+* `false` - If the button is an unsupported button, like keyboardButtonRequestPhone, keyboardButtonRequestGeoLocation, keyboardButtonSwitchInlinekeyboardButtonBuy; you will have to parse data from these buttons manually
+
+
+';
+            }
             $constructors = '### Possible values (constructors):
 
 '.$constructors.'
@@ -628,7 +652,7 @@ description: A UTF8 string of variable length
 ## Type: string  
 [Back to constructor index](index.md)
 
-A string of variable length. The total length in bytes of the string must not be bigger than 16777215.
+A UTF8 string of variable length. The total length in bytes of the string must not be bigger than 16777215.
 ');
         file_put_contents('types/bytes.md', '---
 title: bytes
@@ -637,7 +661,7 @@ description: A string of variable length
 ## Type: bytes  
 [Back to constructor index](index.md)
 
-A string of variable length, with length smaller than or equal to 16777215.
+A string of bytes of variable length, with length smaller than or equal to 16777215.
 ');
 
         file_put_contents('types/int.md', '---

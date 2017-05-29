@@ -15,8 +15,9 @@ namespace danog\MadelineProto;
 /**
  * Manages all of the mtproto stuff.
  */
-class MTProto
+class MTProto extends \Volatile
 {
+    use \danog\Serializable;
     use \danog\MadelineProto\MTProtoTools\AckHandler;
     use \danog\MadelineProto\MTProtoTools\AuthKeyHandler;
     use \danog\MadelineProto\MTProtoTools\CallHandler;
@@ -40,22 +41,161 @@ class MTProto
     use \danog\MadelineProto\TL\Conversion\TD;
     use \danog\MadelineProto\Tools;
     use \danog\MadelineProto\VoIP\AuthKeyHandler;
+    use \danog\MadelineProto\Wrappers\DialogHandler;
+    use \danog\MadelineProto\Wrappers\Login;
+
+    const NOT_LOGGED_IN = 0;
+    const WAITING_CODE = 1;
+    const WAITING_SIGNUP = -1;
+    const WAITING_PASSWORD = 2;
+    const LOGGED_IN = 3;
+    const DISALLOWED_METHODS = [
+        'auth.logOut'                 => 'You cannot use this method directly, use the logout method instead (see https://daniil.it/MadelineProto for more info)',
+        'auth.importBotAuthorization' => 'You cannot use this method directly, use the bot_login method instead (see https://daniil.it/MadelineProto for more info)',
+        'auth.sendCode'               => 'You cannot use this method directly, use the phone_login method instead (see https://daniil.it/MadelineProto for more info)',
+        'auth.signIn'                 => 'You cannot use this method directly, use the complete_phone_login method instead (see https://daniil.it/MadelineProto for more info)',
+        'auth.signUp'                 => 'You cannot use this method directly, use the complete_signup method instead (see https://daniil.it/MadelineProto for more info)',
+        'users.getFullUser'           => 'You cannot use this method directly, use the get_pwr_chat, get_info, get_full_info methods instead (see https://daniil.it/MadelineProto for more info)',
+        'channels.getFullChannel'     => 'You cannot use this method directly, use the get_pwr_chat, get_info, get_full_info methods instead (see https://daniil.it/MadelineProto for more info)',
+        'messages.getFullChat'        => 'You cannot use this method directly, use the get_pwr_chat, get_info, get_full_info methods instead (see https://daniil.it/MadelineProto for more info)',
+        'channels.getParticipants'    => 'You cannot use this method directly, use the get_pwr_chat, get_info, get_full_info methods instead (see https://daniil.it/MadelineProto for more info)',
+        'contacts.resolveUsername'    => 'You cannot use this method directly, use the resolve_username, get_pwr_chat, get_info, get_full_info methods instead (see https://daniil.it/MadelineProto for more info)',
+
+        'messages.acceptEncryption'  => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling secret chats',
+        'messages.discardEncryption' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling secret chats',
+        'messages.requestEncryption' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling secret chats',
+/*
+        'phone.requestCall' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling calls',
+        'phone.acceptCall' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling calls',
+        'phone.confirmCall' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling calls',
+        'phone.discardCall' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling calls',
+*/
+        'updates.getChannelDifference' => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling updates',
+        'updates.getDifference'        => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling updates',
+        'updates.getState'             => 'You cannot use this method directly, see https://daniil.it/MadelineProto for more info on handling updates',
+
+        'upload.getCdnFile'      => 'You cannot use this method directly, use the upload, download_to_stream, download_to_file, download_to_dir methods instead; see https://daniil.it/MadelineProto for more info',
+        'upload.reuploadCdnFile' => 'You cannot use this method directly, use the upload, download_to_stream, download_to_file, download_to_dir methods instead; see https://daniil.it/MadelineProto for more info',
+        'upload.getFile'         => 'You cannot use this method directly, use the upload, download_to_stream, download_to_file, download_to_dir methods instead; see https://daniil.it/MadelineProto for more info',
+        'upload.saveFilePart'    => 'You cannot use this method directly, use the upload, download_to_stream, download_to_file, download_to_dir methods instead; see https://daniil.it/MadelineProto for more info',
+        'upload.saveBigFilePart' => 'You cannot use this method directly, use the upload, download_to_stream, download_to_file, download_to_dir methods instead; see https://daniil.it/MadelineProto for more info',
+
+    ];
+    const BAD_MSG_ERROR_CODES = [
+        16 => 'msg_id too low (most likely, client time is wrong; it would be worthwhile to synchronize it using msg_id notifications and re-send the original message with the “correct” msg_id or wrap it in a container with a new msg_id if the original message had waited too long on the client to be transmitted)',
+        17 => 'msg_id too high (similar to the previous case, the client time has to be synchronized, and the message re-sent with the correct msg_id)',
+        18 => 'incorrect two lower order msg_id bits (the server expects client message msg_id to be divisible by 4)',
+        19 => 'container msg_id is the same as msg_id of a previously received message (this must never happen)',
+        20 => 'message too old, and it cannot be verified whether the server has received a message with this msg_id or not',
+        32 => 'msg_seqno too low (the server has already received a message with a lower msg_id but with either a higher or an equal and odd seqno)',
+        33 => 'msg_seqno too high (similarly, there is a message with a higher msg_id but with either a lower or an equal and odd seqno)',
+        34 => 'an even msg_seqno expected (irrelevant message), but odd received',
+        35 => 'odd msg_seqno expected (relevant message), but even received',
+        48 => 'incorrect server salt (in this case, the bad_server_salt response is received with the correct salt, and the message is to be re-sent with it)',
+        64 => 'invalid container.',
+    ];
+    const MSGS_INFO_FLAGS = [
+        1   => 'nothing is known about the message (msg_id too low, the other party may have forgotten it)',
+        2   => 'message not received (msg_id falls within the range of stored identifiers; however, the other party has certainly not received a message like that)',
+        3   => 'message not received (msg_id too high; however, the other party has certainly not received it yet)',
+        4   => 'message received (note that this response is also at the same time a receipt acknowledgment)',
+        8   => ' and message already acknowledged',
+        16  => ' and message not requiring acknowledgment',
+        32  => ' and RPC query contained in message being processed or processing already complete',
+        64  => ' and content-related response to message already generated',
+        128 => ' and other party knows for a fact that message is already received',
+    ];
+    const REQUESTED = 0;
+    const ACCEPTED = 1;
+    const CONFIRMED = 2;
+    const READY = 3;
+    const EMOJIS = ['😉', '😍', '😛', '😭', '😱', '😡', '😎', '😴', '😵', '😈', '😬', '😇', '😏', '👮', '👷', '💂', '👶', '👨', '👩', '👴', '👵', '😻', '😽', '🙀', '👺', '🙈', '🙉', '🙊', '💀', '👽', '💩', '🔥', '💥', '💤', '👂', '👀', '👃', '👅', '👄', '👍', '👎', '👌', '👊', '✌', '✋', '👐', '👆', '👇', '👉', '👈', '🙏', '👏', '💪', '🚶', '🏃', '💃', '👫', '👪', '👬', '👭', '💅', '🎩', '👑', '👒', '👟', '👞', '👠', '👕', '👗', '👖', '👙', '👜', '👓', '🎀', '💄', '💛', '💙', '💜', '💚', '💍', '💎', '🐶', '🐺', '🐱', '🐭', '🐹', '🐰', '🐸', '🐯', '🐨', '🐻', '🐷', '🐮', '🐗', '🐴', '🐑', '🐘', '🐼', '🐧', '🐥', '🐔', '🐍', '🐢', '🐛', '🐝', '🐜', '🐞', '🐌', '🐙', '🐚', '🐟', '🐬', '🐋', '🐐', '🐊', '🐫', '🍀', '🌹', '🌻', '🍁', '🌾', '🍄', '🌵', '🌴', '🌳', '🌞', '🌚', '🌙', '🌎', '🌋', '⚡', '☔', '❄', '⛄', '🌀', '🌈', '🌊', '🎓', '🎆', '🎃', '👻', '🎅', '🎄', '🎁', '🎈', '🔮', '🎥', '📷', '💿', '💻', '☎', '📡', '📺', '📻', '🔉', '🔔', '⏳', '⏰', '⌚', '🔒', '🔑', '🔎', '💡', '🔦', '🔌', '🔋', '🚿', '🚽', '🔧', '🔨', '🚪', '🚬', '💣', '🔫', '🔪', '💊', '💉', '💰', '💵', '💳', '✉', '📫', '📦', '📅', '📁', '✂', '📌', '📎', '✒', '✏', '📐', '📚', '🔬', '🔭', '🎨', '🎬', '🎤', '🎧', '🎵', '🎹', '🎻', '🎺', '🎸', '👾', '🎮', '🃏', '🎲', '🎯', '🏈', '🏀', '⚽', '⚾', '🎾', '🎱', '🏉', '🎳', '🏁', '🏇', '🏆', '🏊', '🏄', '☕', '🍼', '🍺', '🍷', '🍴', '🍕', '🍔', '🍟', '🍗', '🍱', '🍚', '🍜', '🍡', '🍳', '🍞', '🍩', '🍦', '🎂', '🍰', '🍪', '🍫', '🍭', '🍯', '🍎', '🍏', '🍊', '🍋', '🍒', '🍇', '🍉', '🍓', '🍑', '🍌', '🍐', '🍍', '🍆', '🍅', '🌽', '🏡', '🏥', '🏦', '⛪', '🏰', '⛺', '🏭', '🗻', '🗽', '🎠', '🎡', '⛲', '🎢', '🚢', '🚤', '⚓', '🚀', '✈', '🚁', '🚂', '🚋', '🚎', '🚌', '🚙', '🚗', '🚕', '🚛', '🚨', '🚔', '🚒', '🚑', '🚲', '🚠', '🚜', '🚦', '⚠', '🚧', '⛽', '🎰', '🗿', '🎪', '🎭', '🇯🇵', '🇰🇷', '🇩🇪', '🇨🇳', '🇺🇸', '🇫🇷', '🇪🇸', '🇮🇹', '🇷🇺', '🇬🇧', '1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣', '0⃣', '🔟', '❗', '❓', '♥', '♦', '💯', '🔗', '🔱', '🔴', '🔵', '🔶', '🔷'];
+    const TD_PARAMS_CONVERSION = [
+        'updateNewMessage' => [
+            '_'                    => 'updateNewMessage',
+            'disable_notification' => ['message', 'silent'],
+            'message'              => ['message'],
+         ],
+         'message' => [
+              '_'                  => 'message',
+             'id'                  => ['id'],
+             'sender_user_id'      => ['from_id'],
+             'chat_id'             => ['to_id', 'choose_chat_id_from_botapi'],
+             'send_state'          => ['choose_incoming_or_sent'],
+             'can_be_edited'       => ['choose_can_edit'],
+             'can_be_deleted'      => ['choose_can_delete'],
+             'is_post'             => ['post'],
+             'date'                => ['date'],
+             'edit_date'           => ['edit_date'],
+             'forward_info'        => ['fwd_info', 'choose_forward_info'],
+             'reply_to_message_id' => ['reply_to_msg_id'],
+             'ttl'                 => ['choose_ttl'],
+             'ttl_expires_in'      => ['choose_ttl_expires_in'],
+             'via_bot_user_id'     => ['via_bot_id'],
+             'views'               => ['views'],
+             'content'             => ['choose_message_content'],
+             'reply_markup'        => ['reply_markup'],
+         ],
+
+         'messages.sendMessage' => [
+             'chat_id'               => ['peer'],
+             'reply_to_message_id'   => ['reply_to_msg_id'],
+             'disable_notification'  => ['silent'],
+             'from_background'       => ['background'],
+             'input_message_content' => ['choose_message_content'],
+             'reply_markup'          => ['reply_markup'],
+         ],
+
+    ];
+    const TD_REVERSE = [
+        'sendMessage'=> 'messages.sendMessage',
+    ];
+    const TD_IGNORE = ['updateMessageID'];
 
     public $settings = [];
-    public $config = ['expires' => -1];
-    public $ipv6 = false;
-    public $should_serialize = true;
+    private $config = ['expires' => -1];
     public $authorization = null;
-    public $authorized = false;
-    public $login_temp_status = 'none';
-    public $bigint = false;
+    public $authorized = 0;
+
+    private $rsa_keys = [];
+    private $last_recv = 0;
+    private $dh_config = ['version' => 0];
+    public $chats = [];
+    public $last_stored = 0;
+    public $qres = [];
+    private $pending_updates = [];
+    private $updates_state = ['_' => 'MadelineProto.Updates_state', 'pending_seq_updates' => [], 'pending_pts_updates' => [], 'sync_loading' => true, 'seq' => 0, 'pts' => 0, 'date' => 0, 'qts' => 0];
+    private $got_state = false;
+    private $channels_state = [];
+    public $updates = [];
+    public $updates_key = 0;
+    private $getting_state = false;
+    public $full_chats = [];
+    private $msg_ids = [];
+    private $v = 0;
+
+    private $dialog_params = ['_' => 'MadelineProto.dialogParams', 'limit' => 0, 'offset_date' => 0, 'offset_id' => 0, 'offset_peer' =>  ['_' => 'inputPeerEmpty']];
+    private $zero;
+    private $one;
+    private $two;
+    private $three;
+    private $four;
+    private $twoe1984;
+    private $twoe2047;
+    private $twoe2048;
+
+    private $ipv6 = false;
+    public $should_serialize = false;
     public $run_workers = false;
     public $threads = false;
 
-    public function __construct($settings = [])
+    public function ___construct($settings = [])
     {
-        //if ($this->unserialized($settings)) return true;
-        $this->bigint = PHP_INT_SIZE < 8;
+        \danog\MadelineProto\Logger::class_exists();
+
+        // Detect ipv6
+        $this->ipv6 = strlen(@file_get_contents('http://ipv6.test-ipv6.com/', false, stream_context_create(['http' => ['timeout' => 1]]))) > 0;
+
         // Parse settings
         $this->parse_settings($settings);
 
@@ -66,10 +206,12 @@ class MTProto
         } else {
             $this->datacenter = new DataCenter($this->settings['connection'], $this->settings['connection_settings']);
         }
-        // Load rsa key
-        \danog\MadelineProto\Logger::log(['Loading RSA key...'], Logger::ULTRA_VERBOSE);
-        $key = new RSA($this->settings['authorization']['rsa_key']);
-        $this->rsa_keys[$key->fp] = $key;
+        // Load rsa keys
+        \danog\MadelineProto\Logger::log(['Loading RSA keys...'], Logger::ULTRA_VERBOSE);
+        foreach ($this->settings['authorization']['rsa_keys'] as $key) {
+            $key = new RSA($key);
+            $this->rsa_keys[$key->fp] = $key;
+        }
 
         // Istantiate TL class
         \danog\MadelineProto\Logger::log(['Translating tl schemas...'], Logger::ULTRA_VERBOSE);
@@ -107,28 +249,30 @@ class MTProto
         $this->get_config([], ['datacenter' => $this->datacenter->curdc]);
         $this->v = $this->getV();
         $this->should_serialize = true;
+
+        return $this->settings;
     }
 
     public function __sleep()
     {
-        $t = get_object_vars($this);
-        if (isset($t['reader_pool'])) {
-            unset($t['reader_pool']);
-        }
-        if (isset($t['readers'])) {
-            unset($t['readers']);
-        }
-
-        return array_keys($t);
+        return ['encrypted_layer', 'settings', 'config', 'authorization', 'authorized', 'rsa_keys', 'last_recv', 'dh_config', 'chats', 'last_stored', 'qres', 'pending_updates', 'updates_state', 'got_state', 'channels_state', 'updates', 'updates_key', 'getting_state', 'full_chats', 'msg_ids', 'dialog_params', 'datacenter', 'v', 'constructors', 'td_constructors', 'methods', 'td_methods', 'td_descriptions', 'twoe1984', 'twoe2047', 'twoe2048', 'zero', 'one', 'two', 'three', 'four', 'temp_requested_secret_chats', 'secret_chats', 'calls'];
     }
 
     public function __wakeup()
     {
         set_error_handler(['\danog\MadelineProto\Exception', 'ExceptionErrorHandler']);
         $this->setup_logger();
-        if (class_exists('\Thread') && method_exists('\Thread', 'getCurrentThread') && is_object(\Thread::getCurrentThread())) {
+        if (\danog\MadelineProto\Logger::$has_thread && is_object(\Thread::getCurrentThread())) {
             return;
         }
+        // Detect ipv6
+        $this->ipv6 = (bool) strlen(@file_get_contents('http://ipv6.test-ipv6.com/', false, stream_context_create(['http' => ['timeout' => 1]]))) > 0;
+
+        $keys = array_keys((array) get_object_vars($this));
+        if (count($keys) !== count(array_unique($keys))) {
+            throw new Bug74586Exception();
+        }
+
         /*
         if (method_exists($this->datacenter, 'wakeup')) $this->datacenter = $this->datacenter->wakeup();
         foreach ($this->rsa_keys as $key => $elem) {
@@ -138,8 +282,16 @@ class MTProto
             if (method_exists($elem, 'wakeup')) $this->datacenter->sockets[$key] = $elem->wakeup();
         }
         */
+        if (isset($this->data)) {
+            foreach ($this->data as $k => $v) {
+                $this->{$k} = $v;
+            }
+            unset($this->data);
+        }
+        if ($this->authorized === true) {
+            $this->authorized = self::LOGGED_IN;
+        }
         $this->getting_state = false;
-        $this->bigint = PHP_INT_SIZE < 8;
         $this->reset_session();
         if (!isset($this->v) || $this->v !== $this->getV()) {
             \danog\MadelineProto\Logger::log(['Serialization is out of date, reconstructing object!'], Logger::WARNING);
@@ -148,12 +300,18 @@ class MTProto
                 $settings['updates']['callback'] = 'get_updates_update_handler';
             }
             unset($settings['tl_schema']);
+            if (isset($settings['authorization']['rsa_key'])) {
+                unset($settings['authorization']['rsa_key']);
+            }
             $this->reset_session(true, true);
             $this->__construct($settings);
         }
-        $this->datacenter->__construct($this->settings['connection'], $this->settings['connection_settings']);
         $this->setup_threads();
-        if ($this->authorized && $this->settings['updates']['handle_updates']) {
+        $this->datacenter->__construct($this->settings['connection'], $this->settings['connection_settings']);
+        if ($this->authorized === self::LOGGED_IN && !$this->authorization['user']['bot']) {
+            $this->get_dialogs();
+        }
+        if ($this->authorized === self::LOGGED_IN && $this->settings['updates']['handle_updates']) {
             \danog\MadelineProto\Logger::log(['Getting updates after deserialization...'], Logger::NOTICE);
             $this->get_updates_difference();
         }
@@ -161,12 +319,15 @@ class MTProto
 
     public function __destruct()
     {
-        if (isset($this->reader_pool)) {
+        if (\danog\MadelineProto\Logger::$has_thread && is_object(\Thread::getCurrentThread())) {
+            return;
+        }
+        if (isset(Logger::$storage[spl_object_hash($this)])) {
             $this->run_workers = false;
-            while ($number = $this->reader_pool->collect()) {
+            while ($number = Logger::$storage[spl_object_hash($this)]->collect()) {
                 \danog\MadelineProto\Logger::log(['Shutting down reader pool, '.$number.' jobs left'], \danog\MadelineProto\Logger::NOTICE);
             }
-            $this->reader_pool->shutdown();
+            Logger::$storage[spl_object_hash($this)]->shutdown();
         }
     }
 
@@ -180,40 +341,37 @@ class MTProto
 
     public function start_threads()
     {
-        if ($this->threads) {
-            $dcs = $this->datacenter->get_dcs();
-            if (!isset($this->reader_pool)) {
-                $this->reader_pool = new \Pool(count($dcs));
+        if ($this->threads && !is_object(\Thread::getCurrentThread())) {
+            $dcs = $this->datacenter->get_dcs(false);
+            if (!isset(Logger::$storage[spl_object_hash($this)])) {
+                Logger::$storage[spl_object_hash($this)] = new \Pool(count($dcs));
             }
             if (!isset($this->readers)) {
                 $this->readers = [];
             }
             foreach ($dcs as $dc) {
                 if (!isset($this->readers[$dc])) {
+                    Logger::log(['Socket reader on DC '.$dc.': CREATING'], Logger::WARNING);
                     $this->readers[$dc] = new \danog\MadelineProto\Threads\SocketReader($this, $dc);
                 }
                 if (!$this->readers[$dc]->isRunning()) {
+                    Logger::log(['Socket reader on DC '.$dc.': SUBMITTING'], Logger::WARNING);
                     $this->readers[$dc]->garbage = false;
-                    $this->reader_pool->submit($this->readers[$dc]);
-                    Logger::log(['Socket reader on DC '.$dc.': RESTARTED'], Logger::WARNING);
+                    Logger::$storage[spl_object_hash($this)]->submit($this->readers[$dc]);
+                    Logger::log(['Socket reader on DC '.$dc.': WAITING'], Logger::WARNING);
                     while (!$this->readers[$dc]->ready);
+                    Logger::log(['Socket reader on DC '.$dc.': READY'], Logger::WARNING);
                 } else {
-                    Logger::log(['Socket reader on DC '.$dc.': WORKING'], Logger::NOTICE);
+                    Logger::log(['Socket reader on DC '.$dc.': WORKING'], Logger::ULTRA_VERBOSE);
                 }
             }
         }
+
+        return true;
     }
 
     public function parse_settings($settings)
     {
-        // Detect ipv6
-        $google = '';
-        try {
-            $google = @file_get_contents('http://ipv6.test-ipv6.com/', false, stream_context_create(['http' => ['timeout' => 1]]));
-        } catch (Exception $e) {
-        }
-        $this->ipv6 = strlen($google) > 0;
-
         // Detect device model
         try {
             $device_model = php_uname('s');
@@ -232,14 +390,12 @@ class MTProto
         $default_settings = [
             'authorization' => [ // Authorization settings
                 'default_temp_auth_key_expires_in' => 31557600, // validity of temporary keys and the binding of the temporary and permanent keys
-                'rsa_key'                          => '-----BEGIN RSA PUBLIC KEY-----
-MIIBCgKCAQEAwVACPi9w23mF3tBkdZz+zwrzKOaaQdr01vAbU4E1pvkfj4sqDsm6
-lyDONS789sVoD/xCS9Y0hkkC3gtL1tSfTlgCMOOul9lcixlEKzwKENj1Yz/s7daS
-an9tqw3bfUV/nqgbhGX81v/+7RFAEd+RwFnK7a+XYl9sluzHRyVVaTTveB2GazTw
-Efzk2DWgkBluml8OREmvfraX3bkHZJTKX4EQSjBbbdJ2ZXIsRrYOXfaA+xayEGB+
-8hdlLmAjbCVfaigxX0CDqWeR1yFL9kwd9P0NsZRPsmoqVwMbMu7mStFai6aIhc3n
-Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
------END RSA PUBLIC KEY-----', // RSA public key
+                'rsa_keys'                         => [
+                    "-----BEGIN RSA PUBLIC KEY-----\nMIIBCgKCAQEAwVACPi9w23mF3tBkdZz+zwrzKOaaQdr01vAbU4E1pvkfj4sqDsm6\nlyDONS789sVoD/xCS9Y0hkkC3gtL1tSfTlgCMOOul9lcixlEKzwKENj1Yz/s7daS\nan9tqw3bfUV/nqgbhGX81v/+7RFAEd+RwFnK7a+XYl9sluzHRyVVaTTveB2GazTw\nEfzk2DWgkBluml8OREmvfraX3bkHZJTKX4EQSjBbbdJ2ZXIsRrYOXfaA+xayEGB+\n8hdlLmAjbCVfaigxX0CDqWeR1yFL9kwd9P0NsZRPsmoqVwMbMu7mStFai6aIhc3n\nSlv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB\n-----END RSA PUBLIC KEY-----",
+                    "-----BEGIN RSA PUBLIC KEY-----\nMIIBCgKCAQEAxq7aeLAqJR20tkQQMfRn+ocfrtMlJsQ2Uksfs7Xcoo77jAid0bRt\nksiVmT2HEIJUlRxfABoPBV8wY9zRTUMaMA654pUX41mhyVN+XoerGxFvrs9dF1Ru\nvCHbI02dM2ppPvyytvvMoefRoL5BTcpAihFgm5xCaakgsJ/tH5oVl74CdhQw8J5L\nxI/K++KJBUyZ26Uba1632cOiq05JBUW0Z2vWIOk4BLysk7+U9z+SxynKiZR3/xdi\nXvFKk01R3BHV+GUKM2RYazpS/P8v7eyKhAbKxOdRcFpHLlVwfjyM1VlDQrEZxsMp\nNTLYXb6Sce1Uov0YtNx5wEowlREH1WOTlwIDAQAB\n-----END RSA PUBLIC KEY-----",
+                    "-----BEGIN RSA PUBLIC KEY-----\nMIIBCgKCAQEAsQZnSWVZNfClk29RcDTJQ76n8zZaiTGuUsi8sUhW8AS4PSbPKDm+\nDyJgdHDWdIF3HBzl7DHeFrILuqTs0vfS7Pa2NW8nUBwiaYQmPtwEa4n7bTmBVGsB\n1700/tz8wQWOLUlL2nMv+BPlDhxq4kmJCyJfgrIrHlX8sGPcPA4Y6Rwo0MSqYn3s\ng1Pu5gOKlaT9HKmE6wn5Sut6IiBjWozrRQ6n5h2RXNtO7O2qCDqjgB2vBxhV7B+z\nhRbLbCmW0tYMDsvPpX5M8fsO05svN+lKtCAuz1leFns8piZpptpSCFn7bWxiA9/f\nx5x17D7pfah3Sy2pA+NDXyzSlGcKdaUmwQIDAQAB\n-----END RSA PUBLIC KEY-----",
+                    "-----BEGIN RSA PUBLIC KEY-----\nMIIBCgKCAQEAwqjFW0pi4reKGbkc9pK83Eunwj/k0G8ZTioMMPbZmW99GivMibwa\nxDM9RDWabEMyUtGoQC2ZcDeLWRK3W8jMP6dnEKAlvLkDLfC4fXYHzFO5KHEqF06i\nqAqBdmI1iBGdQv/OQCBcbXIWCGDY2AsiqLhlGQfPOI7/vvKc188rTriocgUtoTUc\n/n/sIUzkgwTqRyvWYynWARWzQg0I9olLBBC2q5RQJJlnYXZwyTL3y9tdb7zOHkks\nWV9IMQmZmyZh/N7sMbGWQpt4NMchGpPGeJ2e5gHBjDnlIf2p1yZOYeUYrdbwcS0t\nUiggS4UeE8TzIuXFQxw7fzEIlmhIaq3FnwIDAQAB\n-----END RSA PUBLIC KEY-----",
+                ], // RSA public keys
             ],
             'connection' => [ // List of datacenters/subdomains where to connect
                 'ssl_subdomains' => [ // Subdomains of web.telegram.org for https protocol
@@ -310,7 +466,7 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
                     'telegram'     => __DIR__.'/TL_telegram_v66.tl', // telegram TL scheme
                     'secret'       => __DIR__.'/TL_secret.tl', // secret chats TL scheme
                     'calls'        => __DIR__.'/TL_calls.tl', // calls TL scheme
-                    'td'           => __DIR__.'/TL_td.tl', // telegram-cli TL scheme
+                    //'td'           => __DIR__.'/TL_td.tl', // telegram-cli TL scheme
                     'botAPI'       => __DIR__.'/TL_botAPI.tl', // bot API TL scheme for file ids
                 ],
             ],
@@ -326,6 +482,7 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
                 'logger_param'       => '/tmp/MadelineProto.log',
                 'logger'             => 3, // overwrite previous setting and echo logs
                 'logger_level'       => Logger::VERBOSE, // Logging level, available logging levels are: ULTRA_VERBOSE, VERBOSE, NOTICE, WARNING, ERROR, FATAL_ERROR. Can be provided as last parameter to the logging function.
+                'rollbar_token'      => 'f9fff6689aea4905b58eec73f66c791d',
                 //'rollbar_token'      => 'f9fff6689aea4905b58eec73f66c791d' // You can provide a token for the rollbar log management system
             ],
             'max_tries'         => [
@@ -363,7 +520,7 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
                 'requests' => true,  // Should I get info about unknown peers from PWRTelegram?
             ],
         ];
-        $settings = $this->array_replace_recursive($default_settings, $settings);
+        $settings = array_replace_recursive($this->array_cast_recursive($default_settings, true), $this->array_cast_recursive($settings, true));
         if (!isset($settings['app_info']['api_id'])) {
             throw new Exception('You must provide an api key and an api id, get your own @ my.telegram.org');
         }
@@ -384,7 +541,7 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
 
     public function setup_logger()
     {
-        \Rollbar\Rollbar::init(['environment' => 'production', 'root' => __DIR__, 'access_token' => (isset($this->settings['logger']['rollbar_token']) && !in_array($this->settings['logger']['rollbar_token'], ['f9fff6689aea4905b58eec73f66c791d'])) ? $this->settings['logger']['rollbar_token'] : '300afd7ccef346ea84d0c185ae831718'], false, false);
+        \Rollbar\Rollbar::init(['environment' => 'production', 'root' => __DIR__, 'access_token' => (isset($this->settings['logger']['rollbar_token']) && !in_array($this->settings['logger']['rollbar_token'], ['f9fff6689aea4905b58eec73f66c791d', '300afd7ccef346ea84d0c185ae831718', '11a8c2fe4c474328b40a28193f8d63f5'])) ? $this->settings['logger']['rollbar_token'] : 'beef2d426496462ba34dcaad33d44a14'], false, false);
         \danog\MadelineProto\Logger::constructor($this->settings['logger']['logger'], $this->settings['logger']['logger_param'], isset($this->authorization['user']) ? (isset($this->authorization['user']['username']) ? $this->authorization['user']['username'] : $this->authorization['user']['id']) : '', isset($this->settings['logger']['logger_level']) ? $this->settings['logger']['logger_level'] : Logger::VERBOSE);
     }
 
@@ -416,6 +573,7 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
                 $this->datacenter->dc_connect($new_dc);
             }
         }
+        $this->setup_threads();
         $this->init_authorization();
         if ($old !== $this->datacenter->get_dcs()) {
             $this->connect_to_all_dcs();
@@ -466,7 +624,8 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
             if ($int_dc != $new_dc) {
                 continue;
             }
-            if (preg_match('|media|', $new_dc)) {
+            \danog\MadelineProto\Logger::log([$int_dc, $new_dc]);
+            if (preg_match('|_|', $new_dc)) {
                 continue;
             }
             \danog\MadelineProto\Logger::log(['Copying authorization from dc '.$authorized_dc.' to dc '.$new_dc.'...'], Logger::VERBOSE);
@@ -538,11 +697,396 @@ Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB
 
     public function getV()
     {
-        return 24;
+        return 36;
     }
 
     public function get_self()
     {
         return $this->authorization['user'];
     }
+
+    const ALL_MIMES = [
+      'png' => [
+        0 => 'image/png',
+        1 => 'image/x-png',
+      ],
+      'bmp' => [
+        0  => 'image/bmp',
+        1  => 'image/x-bmp',
+        2  => 'image/x-bitmap',
+        3  => 'image/x-xbitmap',
+        4  => 'image/x-win-bitmap',
+        5  => 'image/x-windows-bmp',
+        6  => 'image/ms-bmp',
+        7  => 'image/x-ms-bmp',
+        8  => 'application/bmp',
+        9  => 'application/x-bmp',
+        10 => 'application/x-win-bitmap',
+      ],
+      'gif' => [
+        0 => 'image/gif',
+      ],
+      'jpeg' => [
+        0 => 'image/jpeg',
+        1 => 'image/pjpeg',
+      ],
+      'xspf' => [
+        0 => 'application/xspf+xml',
+      ],
+      'vlc' => [
+        0 => 'application/videolan',
+      ],
+      'wmv' => [
+        0 => 'video/x-ms-wmv',
+        1 => 'video/x-ms-asf',
+      ],
+      'au' => [
+        0 => 'audio/x-au',
+      ],
+      'ac3' => [
+        0 => 'audio/ac3',
+      ],
+      'flac' => [
+        0 => 'audio/x-flac',
+      ],
+      'ogg' => [
+        0 => 'audio/ogg',
+        1 => 'video/ogg',
+        2 => 'application/ogg',
+      ],
+      'kmz' => [
+        0 => 'application/vnd.google-earth.kmz',
+      ],
+      'kml' => [
+        0 => 'application/vnd.google-earth.kml+xml',
+      ],
+      'rtx' => [
+        0 => 'text/richtext',
+      ],
+      'rtf' => [
+        0 => 'text/rtf',
+      ],
+      'jar' => [
+        0 => 'application/java-archive',
+        1 => 'application/x-java-application',
+        2 => 'application/x-jar',
+      ],
+      'zip' => [
+        0 => 'application/x-zip',
+        1 => 'application/zip',
+        2 => 'application/x-zip-compressed',
+        3 => 'application/s-compressed',
+        4 => 'multipart/x-zip',
+      ],
+      '7zip' => [
+        0 => 'application/x-compressed',
+      ],
+      'xml' => [
+        0 => 'application/xml',
+        1 => 'text/xml',
+      ],
+      'svg' => [
+        0 => 'image/svg+xml',
+      ],
+      '3g2' => [
+        0 => 'video/3gpp2',
+      ],
+      '3gp' => [
+        0 => 'video/3gp',
+        1 => 'video/3gpp',
+      ],
+      'mp4' => [
+        0 => 'video/mp4',
+      ],
+      'm4a' => [
+        0 => 'audio/x-m4a',
+      ],
+      'f4v' => [
+        0 => 'video/x-f4v',
+      ],
+      'flv' => [
+        0 => 'video/x-flv',
+      ],
+      'webm' => [
+        0 => 'video/webm',
+      ],
+      'aac' => [
+        0 => 'audio/x-acc',
+      ],
+      'm4u' => [
+        0 => 'application/vnd.mpegurl',
+      ],
+      'pdf' => [
+        0 => 'application/pdf',
+        1 => 'application/octet-stream',
+      ],
+      'pptx' => [
+        0 => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ],
+      'ppt' => [
+        0 => 'application/powerpoint',
+        1 => 'application/vnd.ms-powerpoint',
+        2 => 'application/vnd.ms-office',
+        3 => 'application/msword',
+      ],
+      'docx' => [
+        0 => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ],
+      'xlsx' => [
+        0 => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        1 => 'application/vnd.ms-excel',
+      ],
+      'xl' => [
+        0 => 'application/excel',
+      ],
+      'xls' => [
+        0 => 'application/msexcel',
+        1 => 'application/x-msexcel',
+        2 => 'application/x-ms-excel',
+        3 => 'application/x-excel',
+        4 => 'application/x-dos_ms_excel',
+        5 => 'application/xls',
+        6 => 'application/x-xls',
+      ],
+      'xsl' => [
+        0 => 'text/xsl',
+      ],
+      'mpeg' => [
+        0 => 'video/mpeg',
+      ],
+      'mov' => [
+        0 => 'video/quicktime',
+      ],
+      'avi' => [
+        0 => 'video/x-msvideo',
+        1 => 'video/msvideo',
+        2 => 'video/avi',
+        3 => 'application/x-troff-msvideo',
+      ],
+      'movie' => [
+        0 => 'video/x-sgi-movie',
+      ],
+      'log' => [
+        0 => 'text/x-log',
+      ],
+      'txt' => [
+        0 => 'text/plain',
+      ],
+      'css' => [
+        0 => 'text/css',
+      ],
+      'html' => [
+        0 => 'text/html',
+      ],
+      'wav' => [
+        0 => 'audio/x-wav',
+        1 => 'audio/wave',
+        2 => 'audio/wav',
+      ],
+      'xhtml' => [
+        0 => 'application/xhtml+xml',
+      ],
+      'tar' => [
+        0 => 'application/x-tar',
+      ],
+      'tgz' => [
+        0 => 'application/x-gzip-compressed',
+      ],
+      'psd' => [
+        0 => 'application/x-photoshop',
+        1 => 'image/vnd.adobe.photoshop',
+      ],
+      'exe' => [
+        0 => 'application/x-msdownload',
+      ],
+      'js' => [
+        0 => 'application/x-javascript',
+      ],
+      'mp3' => [
+        0 => 'audio/mpeg',
+        1 => 'audio/mpg',
+        2 => 'audio/mpeg3',
+        3 => 'audio/mp3',
+      ],
+      'rar' => [
+        0 => 'application/x-rar',
+        1 => 'application/rar',
+        2 => 'application/x-rar-compressed',
+      ],
+      'gzip' => [
+        0 => 'application/x-gzip',
+      ],
+      'hqx' => [
+        0 => 'application/mac-binhex40',
+        1 => 'application/mac-binhex',
+        2 => 'application/x-binhex40',
+        3 => 'application/x-mac-binhex40',
+      ],
+      'cpt' => [
+        0 => 'application/mac-compactpro',
+      ],
+      'bin' => [
+        0 => 'application/macbinary',
+        1 => 'application/mac-binary',
+        2 => 'application/x-binary',
+        3 => 'application/x-macbinary',
+      ],
+      'oda' => [
+        0 => 'application/oda',
+      ],
+      'ai' => [
+        0 => 'application/postscript',
+      ],
+      'smil' => [
+        0 => 'application/smil',
+      ],
+      'mif' => [
+        0 => 'application/vnd.mif',
+      ],
+      'wbxml' => [
+        0 => 'application/wbxml',
+      ],
+      'wmlc' => [
+        0 => 'application/wmlc',
+      ],
+      'dcr' => [
+        0 => 'application/x-director',
+      ],
+      'dvi' => [
+        0 => 'application/x-dvi',
+      ],
+      'gtar' => [
+        0 => 'application/x-gtar',
+      ],
+      'php' => [
+        0 => 'application/x-httpd-php',
+        1 => 'application/php',
+        2 => 'application/x-php',
+        3 => 'text/php',
+        4 => 'text/x-php',
+        5 => 'application/x-httpd-php-source',
+      ],
+      'swf' => [
+        0 => 'application/x-shockwave-flash',
+      ],
+      'sit' => [
+        0 => 'application/x-stuffit',
+      ],
+      'z' => [
+        0 => 'application/x-compress',
+      ],
+      'mid' => [
+        0 => 'audio/midi',
+      ],
+      'aif' => [
+        0 => 'audio/x-aiff',
+        1 => 'audio/aiff',
+      ],
+      'ram' => [
+        0 => 'audio/x-pn-realaudio',
+      ],
+      'rpm' => [
+        0 => 'audio/x-pn-realaudio-plugin',
+      ],
+      'ra' => [
+        0 => 'audio/x-realaudio',
+      ],
+      'rv' => [
+        0 => 'video/vnd.rn-realvideo',
+      ],
+      'jp2' => [
+        0 => 'image/jp2',
+        1 => 'video/mj2',
+        2 => 'image/jpx',
+        3 => 'image/jpm',
+      ],
+      'tiff' => [
+        0 => 'image/tiff',
+      ],
+      'eml' => [
+        0 => 'message/rfc822',
+      ],
+      'pem' => [
+        0 => 'application/x-x509-user-cert',
+        1 => 'application/x-pem-file',
+      ],
+      'p10' => [
+        0 => 'application/x-pkcs10',
+        1 => 'application/pkcs10',
+      ],
+      'p12' => [
+        0 => 'application/x-pkcs12',
+      ],
+      'p7a' => [
+        0 => 'application/x-pkcs7-signature',
+      ],
+      'p7c' => [
+        0 => 'application/pkcs7-mime',
+        1 => 'application/x-pkcs7-mime',
+      ],
+      'p7r' => [
+        0 => 'application/x-pkcs7-certreqresp',
+      ],
+      'p7s' => [
+        0 => 'application/pkcs7-signature',
+      ],
+      'crt' => [
+        0 => 'application/x-x509-ca-cert',
+        1 => 'application/pkix-cert',
+      ],
+      'crl' => [
+        0 => 'application/pkix-crl',
+        1 => 'application/pkcs-crl',
+      ],
+      'pgp' => [
+        0 => 'application/pgp',
+      ],
+      'gpg' => [
+        0 => 'application/gpg-keys',
+      ],
+      'rsa' => [
+        0 => 'application/x-pkcs7',
+      ],
+      'ics' => [
+        0 => 'text/calendar',
+      ],
+      'zsh' => [
+        0 => 'text/x-scriptzsh',
+      ],
+      'cdr' => [
+        0 => 'application/cdr',
+        1 => 'application/coreldraw',
+        2 => 'application/x-cdr',
+        3 => 'application/x-coreldraw',
+        4 => 'image/cdr',
+        5 => 'image/x-cdr',
+        6 => 'zz-application/zz-winassoc-cdr',
+      ],
+      'wma' => [
+        0 => 'audio/x-ms-wma',
+      ],
+      'vcf' => [
+        0 => 'text/x-vcard',
+      ],
+      'srt' => [
+        0 => 'text/srt',
+      ],
+      'vtt' => [
+        0 => 'text/vtt',
+      ],
+      'ico' => [
+        0 => 'image/x-icon',
+        1 => 'image/x-ico',
+        2 => 'image/vnd.microsoft.icon',
+      ],
+      'csv' => [
+        0 => 'text/x-comma-separated-values',
+        1 => 'text/comma-separated-values',
+        2 => 'application/vnd.msexcel',
+      ],
+      'json' => [
+        0 => 'application/json',
+        1 => 'text/json',
+      ],
+    ];
 }
