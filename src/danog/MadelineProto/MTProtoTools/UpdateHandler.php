@@ -124,7 +124,7 @@ trait UpdateHandler
 
     public function get_channel_difference($channel)
     {
-        if (!$this->settings['updates']['handle_updates']) {
+        if (!$this->settings['updates']['handle_updates'] || $this->getting_state) {
             return;
         }
         if (!$this->get_channel_state($channel)['sync_loading']) {
@@ -225,7 +225,7 @@ trait UpdateHandler
 
     public function get_updates_difference()
     {
-        if (!$this->settings['updates']['handle_updates']) {
+        if (!$this->settings['updates']['handle_updates'] || $this->getting_state) {
             return;
         }
         if (!$this->get_update_state()['sync_loading']) {
@@ -601,7 +601,7 @@ trait UpdateHandler
         if (isset($this->settings['pwr']['strict']) && $this->settings['pwr']['strict']) {
             $this->pwr_update_handler($update);
         } else {
-            $this->settings['updates']['callback'] === 'get_updates_update_handler' ? $this->get_updates_update_handler($update) : $this->settings['updates']['callback']($update);
+            in_array($this->settings['updates']['callback'], [['danog\MadelineProto\API', 'get_updates_update_handler'], 'get_updates_update_handler']) ? $this->get_updates_update_handler($update) : $this->settings['updates']['callback']($update);
         }
     }
 

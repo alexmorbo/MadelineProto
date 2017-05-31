@@ -82,7 +82,7 @@ class MTProto extends \Volatile
 
     ];
     const BAD_MSG_ERROR_CODES = [
-        16 => 'msg_id too low (most likely, client time is wrong; it would be worthwhile to synchronize it using msg_id notifications and re-send the original message with the “correct” msg_id or wrap it in a container with a new msg_id if the original message had waited too long on the client to be transmitted)',
+        16 => 'msg_id too low (most likely, client time is wrong; it would be worthwhile to synchronize it using msg_id notifications and re-send the original message with the â€œcorrectâ€ msg_id or wrap it in a container with a new msg_id if the original message had waited too long on the client to be transmitted)',
         17 => 'msg_id too high (similar to the previous case, the client time has to be synchronized, and the message re-sent with the correct msg_id)',
         18 => 'incorrect two lower order msg_id bits (the server expects client message msg_id to be divisible by 4)',
         19 => 'container msg_id is the same as msg_id of a previously received message (this must never happen)',
@@ -109,7 +109,7 @@ class MTProto extends \Volatile
     const ACCEPTED = 1;
     const CONFIRMED = 2;
     const READY = 3;
-    const EMOJIS = ['😉', '😍', '😛', '😭', '😱', '😡', '😎', '😴', '😵', '😈', '😬', '😇', '😏', '👮', '👷', '💂', '👶', '👨', '👩', '👴', '👵', '😻', '😽', '🙀', '👺', '🙈', '🙉', '🙊', '💀', '👽', '💩', '🔥', '💥', '💤', '👂', '👀', '👃', '👅', '👄', '👍', '👎', '👌', '👊', '✌', '✋', '👐', '👆', '👇', '👉', '👈', '🙏', '👏', '💪', '🚶', '🏃', '💃', '👫', '👪', '👬', '👭', '💅', '🎩', '👑', '👒', '👟', '👞', '👠', '👕', '👗', '👖', '👙', '👜', '👓', '🎀', '💄', '💛', '💙', '💜', '💚', '💍', '💎', '🐶', '🐺', '🐱', '🐭', '🐹', '🐰', '🐸', '🐯', '🐨', '🐻', '🐷', '🐮', '🐗', '🐴', '🐑', '🐘', '🐼', '🐧', '🐥', '🐔', '🐍', '🐢', '🐛', '🐝', '🐜', '🐞', '🐌', '🐙', '🐚', '🐟', '🐬', '🐋', '🐐', '🐊', '🐫', '🍀', '🌹', '🌻', '🍁', '🌾', '🍄', '🌵', '🌴', '🌳', '🌞', '🌚', '🌙', '🌎', '🌋', '⚡', '☔', '❄', '⛄', '🌀', '🌈', '🌊', '🎓', '🎆', '🎃', '👻', '🎅', '🎄', '🎁', '🎈', '🔮', '🎥', '📷', '💿', '💻', '☎', '📡', '📺', '📻', '🔉', '🔔', '⏳', '⏰', '⌚', '🔒', '🔑', '🔎', '💡', '🔦', '🔌', '🔋', '🚿', '🚽', '🔧', '🔨', '🚪', '🚬', '💣', '🔫', '🔪', '💊', '💉', '💰', '💵', '💳', '✉', '📫', '📦', '📅', '📁', '✂', '📌', '📎', '✒', '✏', '📐', '📚', '🔬', '🔭', '🎨', '🎬', '🎤', '🎧', '🎵', '🎹', '🎻', '🎺', '🎸', '👾', '🎮', '🃏', '🎲', '🎯', '🏈', '🏀', '⚽', '⚾', '🎾', '🎱', '🏉', '🎳', '🏁', '🏇', '🏆', '🏊', '🏄', '☕', '🍼', '🍺', '🍷', '🍴', '🍕', '🍔', '🍟', '🍗', '🍱', '🍚', '🍜', '🍡', '🍳', '🍞', '🍩', '🍦', '🎂', '🍰', '🍪', '🍫', '🍭', '🍯', '🍎', '🍏', '🍊', '🍋', '🍒', '🍇', '🍉', '🍓', '🍑', '🍌', '🍐', '🍍', '🍆', '🍅', '🌽', '🏡', '🏥', '🏦', '⛪', '🏰', '⛺', '🏭', '🗻', '🗽', '🎠', '🎡', '⛲', '🎢', '🚢', '🚤', '⚓', '🚀', '✈', '🚁', '🚂', '🚋', '🚎', '🚌', '🚙', '🚗', '🚕', '🚛', '🚨', '🚔', '🚒', '🚑', '🚲', '🚠', '🚜', '🚦', '⚠', '🚧', '⛽', '🎰', '🗿', '🎪', '🎭', '🇯🇵', '🇰🇷', '🇩🇪', '🇨🇳', '🇺🇸', '🇫🇷', '🇪🇸', '🇮🇹', '🇷🇺', '🇬🇧', '1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣', '0⃣', '🔟', '❗', '❓', '♥', '♦', '💯', '🔗', '🔱', '🔴', '🔵', '🔶', '🔷'];
+    const EMOJIS = ['ðŸ˜‰', 'ðŸ˜', 'ðŸ˜›', 'ðŸ˜­', 'ðŸ˜±', 'ðŸ˜¡', 'ðŸ˜Ž', 'ðŸ˜´', 'ðŸ˜µ', 'ðŸ˜ˆ', 'ðŸ˜¬', 'ðŸ˜‡', 'ðŸ˜', 'ðŸ‘®', 'ðŸ‘·', 'ðŸ’‚', 'ðŸ‘¶', 'ðŸ‘¨', 'ðŸ‘©', 'ðŸ‘´', 'ðŸ‘µ', 'ðŸ˜»', 'ðŸ˜½', 'ðŸ™€', 'ðŸ‘º', 'ðŸ™ˆ', 'ðŸ™‰', 'ðŸ™Š', 'ðŸ’€', 'ðŸ‘½', 'ðŸ’©', 'ðŸ”¥', 'ðŸ’¥', 'ðŸ’¤', 'ðŸ‘‚', 'ðŸ‘€', 'ðŸ‘ƒ', 'ðŸ‘…', 'ðŸ‘„', 'ðŸ‘', 'ðŸ‘Ž', 'ðŸ‘Œ', 'ðŸ‘Š', 'âœŒ', 'âœ‹', 'ðŸ‘', 'ðŸ‘†', 'ðŸ‘‡', 'ðŸ‘‰', 'ðŸ‘ˆ', 'ðŸ™', 'ðŸ‘', 'ðŸ’ª', 'ðŸš¶', 'ðŸƒ', 'ðŸ’ƒ', 'ðŸ‘«', 'ðŸ‘ª', 'ðŸ‘¬', 'ðŸ‘­', 'ðŸ’…', 'ðŸŽ©', 'ðŸ‘‘', 'ðŸ‘’', 'ðŸ‘Ÿ', 'ðŸ‘ž', 'ðŸ‘ ', 'ðŸ‘•', 'ðŸ‘—', 'ðŸ‘–', 'ðŸ‘™', 'ðŸ‘œ', 'ðŸ‘“', 'ðŸŽ€', 'ðŸ’„', 'ðŸ’›', 'ðŸ’™', 'ðŸ’œ', 'ðŸ’š', 'ðŸ’', 'ðŸ’Ž', 'ðŸ¶', 'ðŸº', 'ðŸ±', 'ðŸ­', 'ðŸ¹', 'ðŸ°', 'ðŸ¸', 'ðŸ¯', 'ðŸ¨', 'ðŸ»', 'ðŸ·', 'ðŸ®', 'ðŸ—', 'ðŸ´', 'ðŸ‘', 'ðŸ˜', 'ðŸ¼', 'ðŸ§', 'ðŸ¥', 'ðŸ”', 'ðŸ', 'ðŸ¢', 'ðŸ›', 'ðŸ', 'ðŸœ', 'ðŸž', 'ðŸŒ', 'ðŸ™', 'ðŸš', 'ðŸŸ', 'ðŸ¬', 'ðŸ‹', 'ðŸ', 'ðŸŠ', 'ðŸ«', 'ðŸ€', 'ðŸŒ¹', 'ðŸŒ»', 'ðŸ', 'ðŸŒ¾', 'ðŸ„', 'ðŸŒµ', 'ðŸŒ´', 'ðŸŒ³', 'ðŸŒž', 'ðŸŒš', 'ðŸŒ™', 'ðŸŒŽ', 'ðŸŒ‹', 'âš¡', 'â˜”', 'â„', 'â›„', 'ðŸŒ€', 'ðŸŒˆ', 'ðŸŒŠ', 'ðŸŽ“', 'ðŸŽ†', 'ðŸŽƒ', 'ðŸ‘»', 'ðŸŽ…', 'ðŸŽ„', 'ðŸŽ', 'ðŸŽˆ', 'ðŸ”®', 'ðŸŽ¥', 'ðŸ“·', 'ðŸ’¿', 'ðŸ’»', 'â˜Ž', 'ðŸ“¡', 'ðŸ“º', 'ðŸ“»', 'ðŸ”‰', 'ðŸ””', 'â³', 'â°', 'âŒš', 'ðŸ”’', 'ðŸ”‘', 'ðŸ”Ž', 'ðŸ’¡', 'ðŸ”¦', 'ðŸ”Œ', 'ðŸ”‹', 'ðŸš¿', 'ðŸš½', 'ðŸ”§', 'ðŸ”¨', 'ðŸšª', 'ðŸš¬', 'ðŸ’£', 'ðŸ”«', 'ðŸ”ª', 'ðŸ’Š', 'ðŸ’‰', 'ðŸ’°', 'ðŸ’µ', 'ðŸ’³', 'âœ‰', 'ðŸ“«', 'ðŸ“¦', 'ðŸ“…', 'ðŸ“', 'âœ‚', 'ðŸ“Œ', 'ðŸ“Ž', 'âœ’', 'âœ', 'ðŸ“', 'ðŸ“š', 'ðŸ”¬', 'ðŸ”­', 'ðŸŽ¨', 'ðŸŽ¬', 'ðŸŽ¤', 'ðŸŽ§', 'ðŸŽµ', 'ðŸŽ¹', 'ðŸŽ»', 'ðŸŽº', 'ðŸŽ¸', 'ðŸ‘¾', 'ðŸŽ®', 'ðŸƒ', 'ðŸŽ²', 'ðŸŽ¯', 'ðŸˆ', 'ðŸ€', 'âš½', 'âš¾', 'ðŸŽ¾', 'ðŸŽ±', 'ðŸ‰', 'ðŸŽ³', 'ðŸ', 'ðŸ‡', 'ðŸ†', 'ðŸŠ', 'ðŸ„', 'â˜•', 'ðŸ¼', 'ðŸº', 'ðŸ·', 'ðŸ´', 'ðŸ•', 'ðŸ”', 'ðŸŸ', 'ðŸ—', 'ðŸ±', 'ðŸš', 'ðŸœ', 'ðŸ¡', 'ðŸ³', 'ðŸž', 'ðŸ©', 'ðŸ¦', 'ðŸŽ‚', 'ðŸ°', 'ðŸª', 'ðŸ«', 'ðŸ­', 'ðŸ¯', 'ðŸŽ', 'ðŸ', 'ðŸŠ', 'ðŸ‹', 'ðŸ’', 'ðŸ‡', 'ðŸ‰', 'ðŸ“', 'ðŸ‘', 'ðŸŒ', 'ðŸ', 'ðŸ', 'ðŸ†', 'ðŸ…', 'ðŸŒ½', 'ðŸ¡', 'ðŸ¥', 'ðŸ¦', 'â›ª', 'ðŸ°', 'â›º', 'ðŸ­', 'ðŸ—»', 'ðŸ—½', 'ðŸŽ ', 'ðŸŽ¡', 'â›²', 'ðŸŽ¢', 'ðŸš¢', 'ðŸš¤', 'âš“', 'ðŸš€', 'âœˆ', 'ðŸš', 'ðŸš‚', 'ðŸš‹', 'ðŸšŽ', 'ðŸšŒ', 'ðŸš™', 'ðŸš—', 'ðŸš•', 'ðŸš›', 'ðŸš¨', 'ðŸš”', 'ðŸš’', 'ðŸš‘', 'ðŸš²', 'ðŸš ', 'ðŸšœ', 'ðŸš¦', 'âš ', 'ðŸš§', 'â›½', 'ðŸŽ°', 'ðŸ—¿', 'ðŸŽª', 'ðŸŽ­', 'ðŸ‡¯ðŸ‡µ', 'ðŸ‡°ðŸ‡·', 'ðŸ‡©ðŸ‡ª', 'ðŸ‡¨ðŸ‡³', 'ðŸ‡ºðŸ‡¸', 'ðŸ‡«ðŸ‡·', 'ðŸ‡ªðŸ‡¸', 'ðŸ‡®ðŸ‡¹', 'ðŸ‡·ðŸ‡º', 'ðŸ‡¬ðŸ‡§', '1âƒ£', '2âƒ£', '3âƒ£', '4âƒ£', '5âƒ£', '6âƒ£', '7âƒ£', '8âƒ£', '9âƒ£', '0âƒ£', 'ðŸ”Ÿ', 'â—', 'â“', 'â™¥', 'â™¦', 'ðŸ’¯', 'ðŸ”—', 'ðŸ”±', 'ðŸ”´', 'ðŸ”µ', 'ðŸ”¶', 'ðŸ”·'];
     const TD_PARAMS_CONVERSION = [
         'updateNewMessage' => [
             '_'                    => 'updateNewMessage',
@@ -237,13 +237,19 @@ class MTProto extends \Volatile
         $this->datacenter->curdc = 2;
 
         if (!isset($this->authorization['user']['bot']) || !$this->authorization['user']['bot']) {
-            $nearest_dc = $this->method_call('help.getNearestDc', [], ['datacenter' => $this->datacenter->curdc]);
-            \danog\MadelineProto\Logger::log(["We're in ".$nearest_dc['country'].', current dc is '.$nearest_dc['this_dc'].', nearest dc is '.$nearest_dc['nearest_dc'].'.'], Logger::NOTICE);
+            try {
+                $nearest_dc = $this->method_call('help.getNearestDc', [], ['datacenter' => $this->datacenter->curdc]);
+                \danog\MadelineProto\Logger::log(["We're in ".$nearest_dc['country'].', current dc is '.$nearest_dc['this_dc'].', nearest dc is '.$nearest_dc['nearest_dc'].'.'], Logger::NOTICE);
 
-            if ($nearest_dc['nearest_dc'] != $nearest_dc['this_dc']) {
-                $this->datacenter->curdc = $nearest_dc['nearest_dc'];
-                $this->settings['connection_settings']['default_dc'] = $nearest_dc['nearest_dc'];
-                $this->should_serialize = true;
+                if ($nearest_dc['nearest_dc'] != $nearest_dc['this_dc']) {
+                    $this->datacenter->curdc = $nearest_dc['nearest_dc'];
+                    $this->settings['connection_settings']['default_dc'] = $nearest_dc['nearest_dc'];
+                    $this->should_serialize = true;
+                }
+            } catch (RPCErrorException $e) {
+                if ($e->rpc !== 'BOT_METHOD_INVALID') {
+                    throw $e;
+                }
             }
         }
         $this->get_config([], ['datacenter' => $this->datacenter->curdc]);
@@ -255,7 +261,7 @@ class MTProto extends \Volatile
 
     public function __sleep()
     {
-        return ['encrypted_layer', 'settings', 'config', 'authorization', 'authorized', 'rsa_keys', 'last_recv', 'dh_config', 'chats', 'last_stored', 'qres', 'pending_updates', 'updates_state', 'got_state', 'channels_state', 'updates', 'updates_key', 'getting_state', 'full_chats', 'msg_ids', 'dialog_params', 'datacenter', 'v', 'constructors', 'td_constructors', 'methods', 'td_methods', 'td_descriptions', 'twoe1984', 'twoe2047', 'twoe2048', 'zero', 'one', 'two', 'three', 'four', 'temp_requested_secret_chats', 'secret_chats', 'calls'];
+        return ['encrypted_layer', 'settings', 'config', 'authorization', 'authorized', 'rsa_keys', 'last_recv', 'dh_config', 'chats', 'last_stored', 'qres', 'pending_updates', 'updates_state', 'got_state', 'channels_state', 'updates', 'updates_key', 'full_chats', 'msg_ids', 'dialog_params', 'datacenter', 'v', 'constructors', 'td_constructors', 'methods', 'td_methods', 'td_descriptions', 'twoe1984', 'twoe2047', 'twoe2048', 'zero', 'one', 'two', 'three', 'four', 'temp_requested_secret_chats', 'secret_chats', 'calls'];
     }
 
     public function __wakeup()
@@ -292,6 +298,12 @@ class MTProto extends \Volatile
             $this->authorized = self::LOGGED_IN;
         }
         $this->getting_state = false;
+        foreach (debug_backtrace(0) as $trace) {
+            if (isset($trace['function']) && isset($trace['class']) && $trace['function'] === 'deserialize' && $trace['class'] === 'danog\MadelineProto\Serialization') {
+                $this->getting_state = isset($trace['args'][1]) && $trace['args'][1];
+            }
+        }
+
         $this->reset_session();
         if (!isset($this->v) || $this->v !== $this->getV()) {
             \danog\MadelineProto\Logger::log(['Serialization is out of date, reconstructing object!'], Logger::WARNING);
@@ -308,10 +320,13 @@ class MTProto extends \Volatile
         }
         $this->setup_threads();
         $this->datacenter->__construct($this->settings['connection'], $this->settings['connection_settings']);
+        if ($this->authorized === self::LOGGED_IN) {
+            $this->get_self();
+        }
         if ($this->authorized === self::LOGGED_IN && !$this->authorization['user']['bot']) {
             $this->get_dialogs();
         }
-        if ($this->authorized === self::LOGGED_IN && $this->settings['updates']['handle_updates']) {
+        if ($this->authorized === self::LOGGED_IN && $this->settings['updates']['handle_updates'] && !$this->getting_state) {
             \danog\MadelineProto\Logger::log(['Getting updates after deserialization...'], Logger::NOTICE);
             $this->get_updates_difference();
         }
@@ -455,7 +470,7 @@ class MTProto extends \Volatile
                 //'api_hash'        => '4251a2777e179232705e2462706f4143',
                 'device_model'    => $device_model,
                 'system_version'  => $system_version,
-                'app_version'     => 'Unicorn', // 🌚
+                'app_version'     => 'Unicorn', // ðŸŒš
 //                'app_version'     => $this->getV(),
                 'lang_code'       => 'en',
             ],
@@ -586,6 +601,7 @@ class MTProto extends \Volatile
     public function init_authorization()
     {
         $this->initing_authorization = true;
+        $this->getting_state = true;
         foreach ($this->datacenter->sockets as $id => $socket) {
             if (strpos($id, 'media')) {
                 continue;
@@ -611,7 +627,8 @@ class MTProto extends \Volatile
                 $this->should_serialize = true;
             }
         }
-        $this->initing_authorization = true;
+        $this->initing_authorization = false;
+        $this->getting_state = false;
     }
 
     public function sync_authorization($authorized_dc)
@@ -702,6 +719,10 @@ class MTProto extends \Volatile
 
     public function get_self()
     {
+        if ($this->authorization === null) {
+            $this->authorization = ['user' => $this->method_call('users.getUsers', ['id' => [['_' => 'inputUserSelf']]], ['datacenter' => $this->datacenter->curdc])[0]];
+        }
+
         return $this->authorization['user'];
     }
 
